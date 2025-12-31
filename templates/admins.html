@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="card">
+  <h2>Admins</h2>
+
+  {% for u,v in admins.items() %}
+    <div class="card">{{ u }} ({{ v.role }})</div>
+  {% endfor %}
+
+  <form method="post">
+    <input name="user" placeholder="Username">
+    <input name="pass" placeholder="Password">
+    <select name="role">
+      <option value="admin">Admin</option>
+      <option value="readonly">Read Only</option>
+    </select>
+    <input name="otp" placeholder="OTP">
+    <button>Create Admin</button>
+  </form>
+</div>
+{% endblock %}
