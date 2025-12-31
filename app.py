@@ -1,165 +1,82 @@
-from flask import (
-    Flask, render_template, request,
-    redirect, session, jsonify
-)
+from flask import *
+from auth import login_user, send_otp, reset_password, create_admin
+from state import ADMINS,is_super,is_readonly,set_alert,get_alert
+from railway import *
+from audit import ACTIVITY, log_action
 import os
 
-from auth import login_user, send_otp, create_admin
-from state import (
-    ADMINS, is_super, is_readonly,
-    get_alert, set_alert
-)
-from railway import (
-    list_projects, list_services,
-    service_logs, service_metrics,
-    start_service, stop_service, restart_service
-)
-from audit import log_action
+app=Flask(__name__)
+app.secret_key="railway-ui"
 
-app = Flask(__name__)
-app.secret_key = "railway-panel-final"
-
-# ================= AUTH =================
-
-@app.route("/", methods=["GET", "POST"])
+@app.route("/",methods=["GET","POST"])
 def login():
-    if request.method == "POST":
-        if login_user(
-            request.form.get("user"),
-            request.form.get("pass")
-        ):
-            session["user"] = request.form["user"]
+    if request.method=="POST":
+        if login_user(request.form["user"],request.form["pass"]):
+            session["u"]=request.form["user"]
             return redirect("/dashboard")
-
-    return render_template(
-        "login.html",
-        alert=get_alert()
-    )
-
-@app.route("/logout")
-def logout():
-    user = session.get("user")
-    if user:
-        log_action(user, "logout")
-    session.clear()
-    set_alert("👋 Logged out successfully")
-    return redirect("/")
-
-# ================= DASHBOARD =================
+    return render_template("login.html",alert=get_alert())
 
 @app.route("/dashboard")
 def dashboard():
-    if "user" not in session:
-        return redirect("/")
+    if "u" not in session: return redirect("/")
+    return render_template("dashboard.html",projects=projects(),user=session["u"],alert=get_alert())
 
-    return render_template(
-        "dashboard.html",
-        projects=list_projects(),
-        user=session["user"],
-        alert=get_alert()
-    )
+@app.route("/project/<pid>")
+def project(pid):
+    return render_template("services.html",services=services(pid),user=session["u"],readonly=is_readonly(session["u"]))
 
-# ================= PROJECT → SERVICES =================
+@app.route("/service/<sid>")
+def service(sid):
+    return render_template("service.html",sid=sid,user=session["u"])
 
-@app.route("/project/<project_id>")
-def project_services(project_id):
-    if "user" not in session:
-        return redirect("/")
+@app.route("/api/logs/<sid>")
+def api_logs(sid): return jsonify(logs(sid))
 
-    return render_template(
-        "services.html",
-        services=list_services(project_id),
-        pid=project_id,
-        user=session["user"],
-        readonly=is_readonly(session["user"])
-    )
+@app.route("/api/metrics/<sid>")
+def api_metrics(sid): return jsonify(metrics(sid))
 
-# ================= SERVICE PAGE =================
-
-@app.route("/service/<service_id>")
-def service_page(service_id):
-    if "user" not in session:
-        return redirect("/")
-
-    return render_template(
-        "service.html",
-        sid=service_id,
-        user=session["user"]
-    )
-
-# ================= API (AJAX) =================
-
-@app.route("/api/logs/<service_id>")
-def api_logs(service_id):
-    return jsonify(service_logs(service_id))
-
-@app.route("/api/metrics/<service_id>")
-def api_metrics(service_id):
-    return jsonify(service_metrics(service_id))
-
-# ================= SERVICE ACTIONS =================
-
-@app.route("/action", methods=["POST"])
-def service_action():
-    if "user" not in session:
-        return redirect("/")
-
-    user = session["user"]
-
-    if is_readonly(user):
-        set_alert("⛔ Read-only admin cannot perform actions")
+@app.route("/action",methods=["POST"])
+def act():
+    if is_readonly(session["u"]):
+        set_alert("⛔ Read only admin")
         return redirect(request.referrer)
-
-    service_id = request.form["sid"]
-    action = request.form["a"]
-
-    if action == "start":
-        start_service(service_id)
-    elif action == "stop":
-        stop_service(service_id)
-    elif action == "restart":
-        restart_service(service_id)
-
-    log_action(user, f"{action} service {service_id}")
-    set_alert("⚙️ Action executed")
+    action(request.form["sid"],request.form["a"])
+    log_action(session["u"],request.form["a"])
     return redirect(request.referrer)
 
-# ================= ADMINS (SUPER ONLY) =================
-
-@app.route("/admins", methods=["GET", "POST"])
+@app.route("/admins",methods=["GET","POST"])
 def admins():
-    if not is_super(session.get("user")):
-        return redirect("/dashboard")
-
-    if request.method == "POST":
+    if not is_super(session["u"]): return redirect("/dashboard")
+    if request.method=="POST":
         send_otp("Create Admin")
-        create_admin(
-            request.form["user"],
-            request.form["pass"],
-            request.form["role"],
-            request.form["otp"]
-        )
+        set_alert(create_admin(request.form["user"],request.form["pass"],request.form["role"],request.form["otp"]))
+    return render_template("admins.html",admins=ADMINS,user=session["u"],alert=get_alert())
 
-    return render_template(
-        "admins.html",
-        admins=ADMINS,
-        alert=get_alert(),
-        user=session["user"]
-    )
+@app.route("/activity")
+def activity():
+    if not is_super(session["u"]): return redirect("/dashboard")
+    return render_template("activity.html",logs=ACTIVITY,user=session["u"])
 
-# ================= USER PAGE =================
+@app.route("/forgot",methods=["GET","POST"])
+def forgot():
+    if request.method=="POST":
+        send_otp("Password Reset")
+        set_alert("📩 OTP Telegram par bhej diya (10 min valid)")
+        return redirect("/reset")
+    return render_template("forgot.html",alert=get_alert())
 
-@app.route("/coming")
-def coming():
-    if "user" not in session:
+@app.route("/reset",methods=["GET","POST"])
+def reset():
+    if request.method=="POST":
+        set_alert(reset_password(request.form["user"],request.form["otp"],request.form["pass"]))
         return redirect("/")
-    return render_template(
-        "coming.html",
-        user=session["user"]
-    )
+    return render_template("reset.html",alert=get_alert())
 
-# ================= START =================
+@app.route("/logout")
+def logout():
+    session.clear()
+    set_alert("👋 Logged out")
+    return redirect("/")
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port)
+if __name__=="__main__":
+    app.run(host="0.0.0.0",port=int(os.getenv("PORT",8080)))
