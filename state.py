@@ -8,7 +8,7 @@ ALERT=None
 
 RESET_OTP=None
 RESET_TIME=None
-RESET_VALID=600
+RESET_VALID=600  # 10 min
 
 def set_alert(m):
     global ALERT
@@ -34,9 +34,9 @@ def gen_otp():
 
 def verify_otp(code):
     if not RESET_OTP:
-        return False,"No OTP"
+        return False,"❌ OTP request nahi ki gayi"
     if time.time()-RESET_TIME>RESET_VALID:
-        return False,"OTP expired"
+        return False,"⏰ OTP expired (10 min)"
     if code!=RESET_OTP:
-        return False,"Wrong OTP"
-    return True,"OK"
+        return False,"❌ Wrong OTP"
+    return True,"✅ OTP verified"
