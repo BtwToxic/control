@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="card">
+  <h2>Services</h2>
+
+  {% for s in services %}
+    <div class="card">
+      <b>{{ s.node.name }}</b>
+      <a href="/service/{{ s.node.id }}">View Logs & Stats</a>
+
+      {% if not readonly %}
+      <form method="post" action="/action">
+        <input type="hidden" name="sid" value="{{ s.node.id }}">
+        <button name="a" value="start">▶ Start</button>
+        <button name="a" value="stop">⏹ Stop</button>
+        <button name="a" value="restart">🔁 Restart</button>
+      </form>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}
