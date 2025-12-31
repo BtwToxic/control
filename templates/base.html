@@ -5,16 +5,23 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<div class="top">
+
+<div class="topbar">
+  <div>{{ user }}</div>
   <div class="dots">⋮
     <div class="menu">
       <a href="/dashboard">Dashboard</a>
+      {% if user == "dev" %}
       <a href="/admins">Admins</a>
+      <a href="/env">ENV</a>
+      {% endif %}
       <a href="/coming">Users</a>
       <a href="/logout">Logout</a>
     </div>
   </div>
 </div>
+
 {% block body %}{% endblock %}
+
 </body>
 </html>
