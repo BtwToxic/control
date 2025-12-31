@@ -1,0 +1,6 @@
+body{margin:0;background:#020617;color:white;font-family:system-ui}
+.top{display:flex;justify-content:flex-end;padding:10px}
+.dots{position:relative}
+.menu{display:none;position:absolute;right:0;background:#111;border-radius:8px}
+.dots:hover .menu{display:block}
+a{display:block;padding:10px;color:white;text-decoration:none}
