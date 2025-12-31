@@ -1,0 +1,10 @@
+setInterval(()=>{
+ fetch("/api/logs/"+sid).then(r=>r.json()).then(d=>{
+   document.getElementById("l").innerText=d.join("\n")
+ })
+ fetch("/api/metrics/"+sid).then(r=>r.json()).then(m=>{
+   chart.data.datasets[0].data.push(m.cpu||0)
+   chart.data.datasets[1].data.push(m.memory||0)
+   chart.update()
+ })
+},5000)
