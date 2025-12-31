@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block body %}
+
+<div class="card">
+  <h2>Live Service</h2>
+
+  <div id="loader" class="loader"></div>
+
+  <canvas id="cpu"></canvas>
+  <canvas id="ram"></canvas>
+
+  <pre id="logs" class="logs"></pre>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+window.serviceId="{{ sid }}"
+const cpu=new Chart(document.getElementById("cpu"),{type:"line",data:{labels:[],datasets:[{label:"CPU",data:[]}]}})
+const ram=new Chart(document.getElementById("ram"),{type:"line",data:{labels:[],datasets:[{label:"RAM",data:[]}]}})
+</script>
+<script src="/static/app.js"></script>
+{% endblock %}
