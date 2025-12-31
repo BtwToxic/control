@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="card">
+  <h2>Projects</h2>
+
+  {% for p in projects %}
+    <a href="/project/{{ p.node.id }}">
+      <div class="card">{{ p.node.name }}</div>
+    </a>
+  {% endfor %}
+</div>
+{% endblock %}
